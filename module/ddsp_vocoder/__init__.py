@@ -11,7 +11,7 @@ from .discriminator import Discriminator
 from module.utils.loss import generator_adversarial_loss, discriminator_adversarial_loss, feature_matching_loss, multiscale_stft_loss
 
 
-class Cordvox(L.LightningModule):
+class DDSPVocoder(L.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.generator = Generator(**config["generator"])
@@ -38,7 +38,7 @@ class Cordvox(L.LightningModule):
             logits_real, feats_real = D(wf)
             loss_adv = generator_adversarial_loss(logits_fake)
             loss_feat = feature_matching_loss(feats_real, feats_fake)
-            loss_G = loss_stft + loss_feat + loss_adv
+            loss_G = loss_stft + loss_feat + loss_adv * 2.0
         else:
             loss_G = loss_stft
 

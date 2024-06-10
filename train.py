@@ -8,7 +8,7 @@ import torch.optim as optim
 
 import lightning as L
 
-from module.cordvox import Cordvox
+from module.ddsp_vocoder import DDSPVocoder
 from module.utils.dataset import VocoderDataModule
 from module.utils.config import load_json_file
 from module.utils.safetensors import save_tensors
@@ -43,9 +43,9 @@ if __name__ == "__main__":
 
     if model_path.exists():
         print(f"loading model from {model_path}")
-        model = Cordvox.load_from_checkpoint(model_path)
+        model = DDSPVocoder.load_from_checkpoint(model_path)
     else:
-        model = Cordvox(config["model"])
+        model = DDSPVocoder(config["model"])
     
     dm_config = config['data_module']
 

@@ -45,8 +45,8 @@ def ddsp(f0: torch.Tensor, ap: torch.Tensor, se: torch.Tensor, frame_size: int, 
     Output: [N, 1, L * frame_size]
     '''
     impluse = oscillate_impluse(f0, frame_size, sample_rate)
-    noise = torch.randn_like(impluse)
+    noise = torch.rand_like(impluse)
     ap = F.interpolate(ap, scale_factor=frame_size, mode='linear')
-    source = (impluse + ap * noise).squeeze(1)
+    source = ((1 - ap) * impluse + ap * noise).squeeze(1)
     output = filter(source, se, n_fft, frame_size)
-    return output.unsqueeze(1)
+    return torch.tanh(output.unsqueeze(1))

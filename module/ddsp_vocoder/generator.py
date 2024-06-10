@@ -64,7 +64,7 @@ class Generator(nn.Module):
             self,
             n_mels=80,
             internal_channels=256,
-            num_layers=4,
+            num_layers=6,
             n_fft=1920,
             frame_size=480,
             sample_rate=48000,
@@ -83,8 +83,8 @@ class Generator(nn.Module):
     def forward(self, x, f0):
         x = self.input_layer(x) + self.f0_condition(torch.log(F.relu(f0) + 1e-6))
         x = self.mid_layers(x)
-        se = F.elu(self.to_envelope(x)) + 1.0
-        ap = F.elu(self.to_aperiodicity(x)) + 1.0
+        se = torch.exp(self.to_envelope(x))
+        ap = F.sigmoid(self.to_aperiodicity(x))
         return ap, se
     
     def synthesize(self, x, f0):
