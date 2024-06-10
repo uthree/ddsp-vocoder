@@ -3,19 +3,26 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def oscillate_impluse(f0: torch.Tensor, frame_size: int, sample_rate: float):
-    '''
-    f0: [N, 1, L]
-    frame_size: int
-    sample_rate: float
-
-    Output: [N, 1, L * frame_size]
-    '''
-    f0 = F.interpolate(f0, scale_factor=frame_size, mode='linear')
-    I = torch.cumsum(f0, dim=2)
-    sawtooth = (I / sample_rate) % 1.0
-    impluse = sawtooth - sawtooth.roll(-1, dims=(2)) + (f0 / sample_rate)
-    return impluse
+def oscillate_cyclic_noise(
+        f0: torch.Tensor,
+        frame_size: int,
+        sample_rate: float,
+        base_frequency: int = 100.0,
+        beta: float = 0.78,
+        kernel_size: int = 1024
+    ):
+    with torch.no_grad():
+        f0 = F.interpolate(f0, scale_factor=frame_size, mode='linear')
+        rad = torch.cumsum(-f0 / sample_rate, dim=2)
+        sawtooth = rad % 1.0
+        impluse = sawtooth - sawtooth.roll(1, dims=(2))
+        impluse = F.pad(impluse, (kernel_size - 1, 0))
+        t = torch.arange(0, kernel_size, device=f0.device)[None, None, :]
+        decay = torch.exp(-t * base_frequency / beta / sample_rate)
+        noise = torch.randn_like(decay)
+        kernel = noise * decay
+        cyclic_noise = F.conv1d(impluse, kernel)
+    return cyclic_noise
 
 
 def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
@@ -34,7 +41,7 @@ def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     return out
 
 
-def ddsp(f0: torch.Tensor, ap: torch.Tensor, se: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float):
+def ddsp(f0: torch.Tensor, ap: torch.Tensor, se: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float, max_aperiodicty: float = 0.12):
     '''
     f0: [N, 1, L], fundamental frequency
     ap: [N, 1, L], aperiodicty
@@ -44,9 +51,9 @@ def ddsp(f0: torch.Tensor, ap: torch.Tensor, se: torch.Tensor, frame_size: int, 
 
     Output: [N, 1, L * frame_size]
     '''
-    impluse = oscillate_impluse(f0, frame_size, sample_rate)
-    noise = torch.rand_like(impluse)
-    ap = F.interpolate(ap, scale_factor=frame_size, mode='linear')
-    source = ((1 - ap) * impluse + ap * noise).squeeze(1)
+    cyclic_noise = oscillate_cyclic_noise(f0, frame_size, sample_rate)
+    noise = torch.randn_like(cyclic_noise)
+    ap = F.interpolate(ap, scale_factor=frame_size, mode='linear') * max_aperiodicty
+    source = (cyclic_noise + noise * ap).squeeze(1)
     output = filter(source, se, n_fft, frame_size)
     return torch.tanh(output.unsqueeze(1))
