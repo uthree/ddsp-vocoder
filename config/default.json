@@ -30,13 +30,6 @@
             "internal_channels": 256,
             "num_layers": 6,
             "n_fft": 1920
-        },
-        "discriminator": {
-            "msd": {
-                "scales": [1, 2, 4],
-                "channels": 32,
-                "num_layers": 4
-            }
         }
     }
 }

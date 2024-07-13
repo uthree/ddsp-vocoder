@@ -26,36 +26,5 @@ def multiscale_stft_loss(x, y, scales=[16, 32, 64, 128, 256, 512], alpha=1.0, be
         y_spec[y_spec.isnan()] = 0
         y_spec[y_spec.isinf()] = 0
 
-        loss += F.huber_loss(safe_log(x_spec), safe_log(y_spec)) * alpha + F.huber_loss(x_spec, y_spec) * beta 
+        loss += F.l1_loss(safe_log(x_spec), safe_log(y_spec)) * alpha + F.l1_loss(x_spec, y_spec) * beta 
     return loss / num_scales
-
-# 1 = fake, 0 = real
-def discriminator_adversarial_loss(real_outputs, fake_outputs):
-    loss = 0
-    n = min(len(real_outputs), len(fake_outputs))
-    for dr, df in zip(real_outputs, fake_outputs):
-        dr = dr.float()
-        df = df.float()
-        real_loss = (dr ** 2).mean()
-        fake_loss = ((df - 1) ** 2).mean()
-        loss += real_loss + fake_loss
-    return loss / n
-
-
-def generator_adversarial_loss(fake_outputs):
-    loss = 0
-    n = len(fake_outputs)
-    for dg in fake_outputs:
-        dg = dg.float()
-        loss += (dg ** 2).mean()
-    return loss / n
-
-    
-def feature_matching_loss(fmap_real, fmap_fake):
-    loss = 0
-    n = min(len(fmap_real), len(fmap_fake))
-    for r, f in zip(fmap_real, fmap_fake):
-        f = f.float()
-        r = r.float()
-        loss += F.huber_loss(f, r)
-    return loss / n

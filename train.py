@@ -26,7 +26,6 @@ class SaveCheckpoint(L.Callback):
             ckpt_path = self.models_dir / "model.ckpt"
             trainer.save_checkpoint(ckpt_path)
             save_tensors(pl_module.generator.state_dict(), self.models_dir / "generator.safetensors")
-            save_tensors(pl_module.discriminator.state_dict(), self.models_dir / "discriminator.safetensors")
 
 
 if __name__ == "__main__":

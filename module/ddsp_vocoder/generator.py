@@ -75,19 +75,22 @@ class Generator(nn.Module):
         self.n_fft = n_fft
         fft_bin = n_fft // 2 + 1
         self.input_layer = nn.Conv1d(n_mels, internal_channels, 1)
-        self.f0_condition = nn.Conv1d(1, internal_channels, 1)
         self.mid_layers = nn.Sequential(*[ConvNeXtLayer(internal_channels) for _ in range(num_layers)])
         self.to_aperiodicity = nn.Conv1d(internal_channels, 1, 1)
         self.to_envelope = nn.Conv1d(internal_channels, fft_bin, 1)
     
-    def forward(self, x, f0):
-        x = self.input_layer(x) + self.f0_condition(torch.log(F.relu(f0) + 1e-6))
+    def forward(self, x):
+        x = self.input_layer(x)
         x = self.mid_layers(x)
         se = torch.exp(self.to_envelope(x))
         ap = F.sigmoid(self.to_aperiodicity(x))
         return ap, se
     
     def synthesize(self, x, f0):
-        ap, se = self.forward(x, f0)
+        ap, se = self.forward(x)
+        output = ddsp(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
+        return output
+    
+    def ddsp(self, ap, se, f0):
         output = ddsp(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
         return output
