@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 def oscillate_impluse(f0: torch.Tensor, frame_size: int, sample_rate: float):
     '''
     f0: [N, 1, L]
@@ -28,13 +29,9 @@ def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     Output: [N, L * frame_size]
     '''
     device = wf.device
-    N = kernel.shape[0]
-    C = kernel.shape[1]
     window = torch.hann_window(n_fft, device=device)
     wf_stft = torch.stft(wf, n_fft, frame_size, window=window, return_complex=True)[:, :, 1:]
-    rads = torch.rand(N, C, 1, device=device) * 2 * math.pi
-    rotation = torch.exp(1j * rads)
-    out_stft = F.pad(wf_stft * kernel * rotation, [0, 1])
+    out_stft = F.pad(wf_stft * kernel, [0, 1])
     out = torch.istft(out_stft, n_fft, frame_size, window=window)
     return out
 

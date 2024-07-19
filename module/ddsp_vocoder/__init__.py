@@ -7,7 +7,7 @@ import lightning as L
 
 from .generator import Generator
 
-from module.utils.loss import multiscale_stft_loss
+from module.ddsp_vocoder.loss import multiscale_stft_loss
 
 
 class DDSPVocoder(L.LightningModule):
@@ -21,15 +21,12 @@ class DDSPVocoder(L.LightningModule):
         
         ap_hat, se_hat = self.generator(mel)
         fake = self.generator.ddsp(ap_hat, se_hat, f0).squeeze(1)
-        ap = (f0 < 20.0).to(torch.float)
 
         loss_stft = multiscale_stft_loss(wf, fake)
-        loss_periodic = F.mse_loss(ap, ap_hat)
 
         self.log("MS-STFT", loss_stft.item())
-        self.log("Periodicity", loss_periodic.item())
 
-        return loss_stft + loss_periodic * 0.1
+        return loss_stft
     
     def configure_optimizers(self):
         opt_g = optim.AdamW(self.parameters(), lr=1e-4, betas=(0.8, 0.99))
