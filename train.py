@@ -13,6 +13,7 @@ from module.utils.dataset import VocoderDataModule
 from module.utils.config import load_json_file
 from module.utils.safetensors import save_tensors
 
+
 class SaveCheckpoint(L.Callback):
     def __init__(self, models_dir, interval=200):
         super().__init__()

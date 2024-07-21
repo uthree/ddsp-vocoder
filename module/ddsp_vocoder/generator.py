@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -84,13 +86,13 @@ class Generator(nn.Module):
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
-        amplitudes = F.softplus(self.to_amplitude(x))
+        amplitude = F.softplus(self.to_amplitude(x))
         phase = self.to_phase(x)
         periodicity = F.sigmoid(self.to_aperiodicity(x))
-        return periodicity, amplitudes, phase
+        return periodicity, amplitude, phase
     
     def synthesize(self, x, f0):
-        periodicity, amps, phase = self.forward(x)
-        kernel = amps * torch.exp(1j * phase)
+        periodicity, amp, phase = self.forward(x)
+        kernel = amp * torch.exp(1j * phase)
         output = vocoder(f0, periodicity, kernel, self.frame_size, self.n_fft, self.sample_rate)
         return output

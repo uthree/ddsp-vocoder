@@ -43,7 +43,6 @@ class DDSPVocoder(L.LightningModule):
         self.log("loss/Adv.", loss_adv.item())
         self.log("loss/Feat.", loss_feat.item())
 
-
         # Train Discriminator
         opt_D.zero_grad()
         fake = fake.detach()
