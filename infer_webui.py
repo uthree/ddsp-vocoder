@@ -32,7 +32,6 @@ if __name__ == "__main__":
     model = DDSPVocoder.load_from_checkpoint(model_path, map_location=device)
 
     generator = model.generator.to(device)
-    sample_rate = 24000
 
     frame_size = config["preprocess"]["frame_size"]
     length = config['preprocess']['length']

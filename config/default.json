@@ -11,7 +11,7 @@
         "devices": "auto",
         "max_epochs": 10000,
         "precision": "bf16-mixed",
-        "log_every_n_steps": 50
+        "log_every_n_steps": 20
     },
     "data_module": {
         "cache_dir": "dataset_cache",
@@ -32,18 +32,9 @@
             "n_fft": 1920
         },
         "discriminator": {
-            "mpd": {
-                "periods": [1, 2, 3, 5, 7, 11],
-                "channels": 32,
-                "channels_mul": 2,
-                "max_channels": 256,
-                "num_layers": 4
-            },
-            "mrd": {
-                "resolutions": [128, 256, 512],
-                "channels": 32,
-                "num_layers": 6
-            }
+            "scales": [1, 2, 4],
+            "channels": 32,
+            "num_layers": 4
         }
     }
 }

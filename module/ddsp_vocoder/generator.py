@@ -78,20 +78,19 @@ class Generator(nn.Module):
         self.input_layer = nn.Conv1d(n_mels, internal_channels, 1)
         self.mid_layers = nn.Sequential(*[ConvNeXtLayer(internal_channels) for _ in range(num_layers)])
         self.to_aperiodicity = nn.Conv1d(internal_channels, 1, 1)
-        self.to_envelope = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_amplitude = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_phase = nn.Conv1d(internal_channels, fft_bin, 1)
     
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
-        se = torch.exp(self.to_envelope(x))
-        ap = F.sigmoid(self.to_aperiodicity(x))
-        return ap, se
+        amplitudes = F.softplus(self.to_amplitude(x))
+        phase = self.to_phase(x)
+        periodicity = F.sigmoid(self.to_aperiodicity(x))
+        return periodicity, amplitudes, phase
     
     def synthesize(self, x, f0):
-        ap, se = self.forward(x)
-        output = vocoder(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
-        return output
-    
-    def ddsp(self, ap, se, f0):
-        output = vocoder(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
+        periodicity, amps, phase = self.forward(x)
+        kernel = amps * torch.exp(1j * phase)
+        output = vocoder(f0, periodicity, kernel, self.frame_size, self.n_fft, self.sample_rate)
         return output
