@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .vocoder import ddsp
+from .ddsp import vocoder
+
 
 # Layer normalization
 class LayerNorm(nn.Module):
@@ -88,9 +89,9 @@ class Generator(nn.Module):
     
     def synthesize(self, x, f0):
         ap, se = self.forward(x)
-        output = ddsp(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
+        output = vocoder(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
         return output
     
     def ddsp(self, ap, se, f0):
-        output = ddsp(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
+        output = vocoder(f0, ap, se, self.frame_size, self.n_fft, self.sample_rate)
         return output
