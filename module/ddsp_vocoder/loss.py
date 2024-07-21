@@ -8,7 +8,7 @@ def safe_log(x, eps=1e-6):
     return torch.log(x + eps)
 
 
-def multiscale_stft_loss(x, y, scales=[256, 512], alpha=1.0, beta=1.0):
+def multiscale_stft_loss(x, y, scales=[16, 32, 64, 128, 256, 512], alpha=1.0, beta=1.0):
     x = x.to(torch.float)
     y = y.to(torch.float)
 
