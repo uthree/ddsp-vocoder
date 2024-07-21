@@ -51,4 +51,4 @@ def ddsp(f0: torch.Tensor, ap: torch.Tensor, se: torch.Tensor, frame_size: int, 
     ap = F.interpolate(ap, scale_factor=frame_size, mode='linear')
     source = ((1 - ap) * impluse + ap * noise).squeeze(1)
     output = filter(source, se, n_fft, frame_size)
-    return torch.tanh(output.unsqueeze(1))
+    return output.unsqueeze(1)
