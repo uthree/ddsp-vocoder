@@ -32,7 +32,7 @@
             "n_fft": 1920
         },
         "discriminator": {
-            "scales": [1, 2, 4],
+            "scales": [1, 2, 4, 8],
             "channels": 32,
             "num_layers": 4
         }
