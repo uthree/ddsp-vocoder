@@ -39,7 +39,7 @@ class DiscriminatorS(nn.Module):
     
 
 class Discriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 4], channels=32, num_layers=4):
+    def __init__(self, scales=[1, 2, 4, 8], channels=32, num_layers=4):
         super().__init__()
         self.sub_discs = nn.ModuleList()
         for s in scales:
