@@ -40,7 +40,6 @@ def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
 
     Output: [N, L * frame_size]
     '''
-    C = kernel.shape[1]
     device = wf.device
     window = torch.hann_window(n_fft, device=device)
     wf_stft = torch.stft(wf, n_fft, frame_size, window=window, return_complex=True)[:, :, 1:]
@@ -60,7 +59,7 @@ def vocoder(f0: torch.Tensor, periodicity: torch.Tensor, kernel: torch.Tensor, f
     Output: [N, L * frame_size]
     '''
     impluse = oscillate_impluse(f0, frame_size, sample_rate)
-    noise = torch.rand_like(impluse)
+    noise = torch.rand_like(impluse) * 2.0 - 1.0
     periodicity = F.interpolate(periodicity, scale_factor=frame_size, mode='linear')
     source = (periodicity * impluse + (1-periodicity) * noise).squeeze(1)
     output = filter(source, kernel, n_fft, frame_size)
