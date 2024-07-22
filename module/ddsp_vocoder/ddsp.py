@@ -6,6 +6,11 @@ import torch.nn.functional as F
 
 
 def spectrogram(waveform, n_fft, frame_size):
+    '''
+    waveform: [N, L * frame_size]
+
+    Output: [N, fft_bin, L] where fft_bin = n_fft // 2 + 1
+    '''
     device = waveform.device
     w = torch.hann_window(n_fft, device=device)
     spec = torch.stft(waveform, n_fft, frame_size, window=w, return_complex=True).abs()[:, :, 1:]
@@ -48,7 +53,7 @@ def vocoder(f0: torch.Tensor, periodicity: torch.Tensor, kernel: torch.Tensor, f
     '''
     f0: [N, 1, L], fundamental frequency
     periodicity: [N, 1, L], periodicty
-    kernel: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1, spectral envelope
+    kernel: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1, frame-wise convolution kernel in fourier domain. complex allowed.
     frame_size: int
     n_fft: int
 
