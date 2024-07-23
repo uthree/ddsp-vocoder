@@ -65,7 +65,7 @@ class Generator(nn.Module):
             self,
             n_mels=80,
             internal_channels=256,
-            num_layers=6,
+            num_layers=4,
             n_fft=1920,
             frame_size=480,
             sample_rate=48000,

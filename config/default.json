@@ -28,11 +28,11 @@
             "sample_rate": 48000,
             "frame_size": 480,
             "internal_channels": 256,
-            "num_layers": 6,
+            "num_layers": 4,
             "n_fft": 1920
         },
         "discriminator": {
-            "scales": [1, 2, 4, 8],
+            "scales": [1, 2, 4],
             "channels": 32,
             "num_layers": 4
         }

@@ -20,16 +20,16 @@ class DiscriminatorS(nn.Module):
         c = channels
         g = 1
         self.pool = AvgPool1d(scale)
-        self.convs.append(weight_norm(Conv1d(1, c, 41, 1, 20)))
+        self.convs.append(weight_norm(Conv1d(1, c, 11, 1, 5)))
         for _ in range(num_layers):
-            self.convs.append(weight_norm(Conv1d(c, c*2, 21, 3, 10, groups=g)))
+            self.convs.append(weight_norm(Conv1d(c, c*2, 11, 3, 5, groups=g)))
             g = g*2
             c = c*2
-        self.post = weight_norm(Conv1d(c, 1, 21, 1, 10))
+        self.post = weight_norm(Conv1d(c, 1, 11, 1, 5))
 
     def forward(self, x):
-        x = self.pool(x)
         fmap = []
+        x = self.pool(x)
         for l in self.convs:
             x = l(x)
             F.leaky_relu(x, 0.1)
@@ -39,7 +39,7 @@ class DiscriminatorS(nn.Module):
     
 
 class Discriminator(nn.Module):
-    def __init__(self, scales=[1, 2, 4, 8], channels=32, num_layers=4):
+    def __init__(self, scales=[1, 2, 4], channels=32, num_layers=4):
         super().__init__()
         self.sub_discs = nn.ModuleList()
         for s in scales:
