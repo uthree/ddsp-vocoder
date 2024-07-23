@@ -59,7 +59,7 @@ def vocoder(f0: torch.Tensor, periodicity: torch.Tensor, kernel: torch.Tensor, f
     Output: [N, L * frame_size]
     '''
     impluse = oscillate_impluse(f0, frame_size, sample_rate)
-    noise = torch.rand_like(impluse) * 2.0 - 1.0
+    noise = torch.randn_like(impluse)
     periodicity = F.interpolate(periodicity, scale_factor=frame_size, mode='linear')
     source = (periodicity * impluse + (1-periodicity) * noise).squeeze(1)
     output = filter(source, kernel, n_fft, frame_size)
