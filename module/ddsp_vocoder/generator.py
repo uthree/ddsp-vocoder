@@ -77,20 +77,22 @@ class Generator(nn.Module):
         fft_bin = n_fft // 2 + 1
         self.input_layer = nn.Conv1d(n_mels, internal_channels, 1)
         self.mid_layers = nn.Sequential(*[ConvNeXtLayer(internal_channels) for _ in range(num_layers)])
-        self.to_aperiodicity = nn.Conv1d(internal_channels, 1, 1)
-        self.to_amplitude = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.post_norm = LayerNorm(internal_channels)
+        self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
         self.to_phase = nn.Conv1d(internal_channels, fft_bin, 1)
     
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
-        amplitude = torch.exp(self.to_amplitude(x))
+        x = self.post_norm(x)
+        aperiodic = torch.exp(self.to_aperiodic(x))
+        periodic = torch.exp(self.to_periodic(x))
         phase = self.to_phase(x)
-        periodicity = F.sigmoid(self.to_aperiodicity(x))
-        return periodicity, amplitude, phase
+        return aperiodic, periodic, phase
     
     def synthesize(self, x, f0):
-        periodicity, amp, phase = self.forward(x)
-        kernel = amp * torch.exp(1j * phase)
-        output = vocoder(f0, periodicity, kernel, self.frame_size, self.n_fft, self.sample_rate)
+        aperiodic, periodic, phase = self.forward(x)
+        periodic = periodic * torch.exp(1j * phase)
+        output = vocoder(f0, aperiodic, periodic, self.frame_size, self.n_fft, self.sample_rate)
         return output
