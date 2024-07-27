@@ -84,7 +84,7 @@ class Generator(nn.Module):
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
-        amplitude = F.softplus(self.to_amplitude(x))
+        amplitude = torch.exp(self.to_amplitude(x))
         phase = self.to_phase(x)
         periodicity = F.sigmoid(self.to_aperiodicity(x))
         return periodicity, amplitude, phase

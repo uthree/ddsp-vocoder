@@ -20,12 +20,12 @@ class DiscriminatorS(nn.Module):
         c = channels
         g = 1
         self.pool = AvgPool1d(scale)
-        self.convs.append(weight_norm(Conv1d(1, c, 11, 1, 5)))
+        self.convs.append(weight_norm(Conv1d(1, c, 41, 1, 20)))
         for _ in range(num_layers):
-            self.convs.append(weight_norm(Conv1d(c, c*2, 11, 3, 5, groups=g)))
+            self.convs.append(weight_norm(Conv1d(c, c*2, 21, 3, 10, groups=g)))
             g = g*2
             c = c*2
-        self.post = weight_norm(Conv1d(c, 1, 11, 1, 5))
+        self.post = weight_norm(Conv1d(c, 1, 21, 3, 10))
 
     def forward(self, x):
         fmap = []
