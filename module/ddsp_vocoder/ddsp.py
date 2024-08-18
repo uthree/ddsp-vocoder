@@ -5,18 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def spectrogram(waveform, n_fft, frame_size):
-    '''
-    waveform: [N, L * frame_size]
-
-    Output: [N, fft_bin, L] where fft_bin = n_fft // 2 + 1
-    '''
-    device = waveform.device
-    w = torch.hann_window(n_fft, device=device)
-    spec = torch.stft(waveform, n_fft, frame_size, window=w, return_complex=True).abs()[:, :, 1:]
-    return spec
-
-
 def oscillate_impulse(f0: torch.Tensor, frame_size: int, sample_rate: float):
     '''
     f0: [N, 1, L]
@@ -34,6 +22,8 @@ def oscillate_impulse(f0: torch.Tensor, frame_size: int, sample_rate: float):
 
 def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     '''
+    stft-based FIR Filter
+
     wf: [N, L * frame_size]
     kernel: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1
     frame_size: int
@@ -48,20 +38,28 @@ def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     return out
 
 
-def vocoder(f0: torch.Tensor, aperiodic: torch.Tensor, periodic: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float):
+def vocoder(f0: torch.Tensor, noise_spec: torch.Tensor, impulse_response: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float):
     '''
     f0: [N, 1, L], fundamental frequency
-    aperiodic: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1, frame-wise convolution kernel in fourier domain
-    periodic: [N, n_fft, L] periodic feature
+    noise_spec: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1, noise spectrogram
+    impulse_response: [N, n_fft, L] framewise impulse response
     frame_size: int
     n_fft: int
 
     Output: [N, L * frame_size]
     '''
+
+    dtype = f0.dtype
+    f0 = f0.to(torch.float)
+    noise_spec = noise_spec.to(torch.float)
+    impulse_response = impulse_response.to(torch.float)
     
     pulse = oscillate_impulse(f0, frame_size, sample_rate).squeeze(1)
     noise = torch.randn_like(pulse)
-    noise = filter(noise, aperiodic, n_fft, frame_size)
-    pulse = filter(pulse, periodic, n_fft, frame_size)
+    noise = filter(noise, noise_spec, n_fft, frame_size)
+    ir = torch.fft.rfft(impulse_response, dim=1)
+    pulse = filter(pulse, ir, n_fft, frame_size)
     output = noise + pulse
+
+    output = output.to(dtype)
     return output

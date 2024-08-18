@@ -78,21 +78,18 @@ class Generator(nn.Module):
         self.input_layer = nn.Conv1d(n_mels, internal_channels, 1)
         self.mid_layers = nn.Sequential(*[ConvNeXtLayer(internal_channels) for _ in range(num_layers)])
         self.post_norm = LayerNorm(internal_channels)
-        self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
-        self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
-        self.to_phase = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_noise_spec = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_impulse_response = nn.Conv1d(internal_channels, n_fft, 1)
     
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
         x = self.post_norm(x)
-        aperiodic = torch.exp(self.to_aperiodic(x))
-        periodic = torch.exp(self.to_periodic(x))
-        phase = self.to_phase(x)
-        return aperiodic, periodic, phase
+        noise_spec = torch.exp(self.to_noise_spec(x))
+        impulse_response = self.to_impulse_response(x)
+        return noise_spec, impulse_response
     
     def synthesize(self, x, f0):
-        aperiodic, periodic, phase = self.forward(x)
-        periodic = periodic * torch.exp(1j * phase)
-        output = vocoder(f0, aperiodic, periodic, self.frame_size, self.n_fft, self.sample_rate)
+        noise_spec, impulse_response = self.forward(x)
+        output = vocoder(f0, noise_spec, impulse_response, self.frame_size, self.n_fft, self.sample_rate)
         return output
