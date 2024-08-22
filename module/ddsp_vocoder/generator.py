@@ -69,6 +69,7 @@ class Generator(nn.Module):
             n_fft=1920,
             frame_size=480,
             sample_rate=48000,
+            reverb_kernel_size=4096
         ):
         super().__init__()
         self.frame_size = frame_size
@@ -80,7 +81,7 @@ class Generator(nn.Module):
         self.post_norm = LayerNorm(internal_channels)
         self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
         self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
-        self.to_phase = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.reverb = nn.Parameter(torch.randn(1, 1, reverb_kernel_size))
     
     def forward(self, x):
         x = self.input_layer(x)
@@ -88,11 +89,9 @@ class Generator(nn.Module):
         x = self.post_norm(x)
         aperiodic = torch.exp(self.to_aperiodic(x))
         periodic = torch.exp(self.to_periodic(x))
-        phase = self.to_phase(x)
-        return aperiodic, periodic, phase
+        return aperiodic, periodic, self.reverb
     
     def synthesize(self, x, f0):
-        aperiodic, periodic, phase = self.forward(x)
-        periodic = periodic * torch.exp(1j * phase)
-        output = vocoder(f0, aperiodic, periodic, self.frame_size, self.n_fft, self.sample_rate)
+        aperiodic, periodic, reverb = self.forward(x)
+        output = vocoder(f0, aperiodic, periodic, reverb, self.frame_size, self.n_fft, self.sample_rate)
         return output

@@ -5,16 +5,22 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def spectrogram(waveform, n_fft, frame_size):
+def fft_convolve(signal: torch.Tensor, kernel: torch.Tensor):
     '''
-    waveform: [N, L * frame_size]
+    signal: [N, L * frame_size]
+    kernel: [N, 1, kernel_size]
+    '''
+    signal = signal.unsqueeze(1)
+    kernel = F.pad(kernel, (0, signal.shape[-1] - kernel.shape[-1]))
+    
+    signal = F.pad(signal, (0, signal.shape[-1]))
+    kernel = F.pad(kernel, (kernel.shape[-1], 0))
 
-    Output: [N, fft_bin, L] where fft_bin = n_fft // 2 + 1
-    '''
-    device = waveform.device
-    w = torch.hann_window(n_fft, device=device)
-    spec = torch.stft(waveform, n_fft, frame_size, window=w, return_complex=True).abs()[:, :, 1:]
-    return spec
+    output = torch.fft.irfft(torch.fft.rfft(signal) * torch.fft.rfft(kernel))
+    output = output[..., output.shape[-1] // 2:]
+
+    output = output.squeeze(1)
+    return output
 
 
 def oscillate_impulse(f0: torch.Tensor, frame_size: int, sample_rate: float):
@@ -32,7 +38,7 @@ def oscillate_impulse(f0: torch.Tensor, frame_size: int, sample_rate: float):
     return impulse
 
 
-def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
+def spectral_filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     '''
     wf: [N, L * frame_size]
     kernel: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1
@@ -48,20 +54,21 @@ def filter(wf: torch.Tensor, kernel: torch.Tensor, n_fft: int, frame_size: int):
     return out
 
 
-def vocoder(f0: torch.Tensor, aperiodic: torch.Tensor, periodic: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float):
+def vocoder(f0: torch.Tensor, aperiodic: torch.Tensor, periodic: torch.Tensor, reverb: torch.Tensor, frame_size: int, n_fft: int, sample_rate: float):
     '''
     f0: [N, 1, L], fundamental frequency
-    aperiodic: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1, frame-wise convolution kernel in fourier domain
-    periodic: [N, n_fft, L] periodic feature
+    aperiodic: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1
+    periodic: [N, fft_bin, L], where fft_bin = n_fft // 2 + 1
+    reverb = [N, 1, kernel_size]
     frame_size: int
     n_fft: int
 
     Output: [N, L * frame_size]
     '''
-    
     pulse = oscillate_impulse(f0, frame_size, sample_rate).squeeze(1)
     noise = torch.randn_like(pulse)
-    noise = filter(noise, aperiodic, n_fft, frame_size)
-    pulse = filter(pulse, periodic, n_fft, frame_size)
-    output = noise + pulse
+    noise = spectral_filter(noise, aperiodic, n_fft, frame_size)
+    pulse = spectral_filter(pulse, periodic, n_fft, frame_size)
+    voice = noise + pulse
+    output = fft_convolve(voice, reverb)
     return output
