@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .ddsp import vocoder
+from .ddsp import subtractive_synthesizer
 
 
 # Layer normalization
@@ -69,7 +69,6 @@ class Generator(nn.Module):
             n_fft=1920,
             frame_size=480,
             sample_rate=48000,
-            reverb_kernel_size=4096
         ):
         super().__init__()
         self.frame_size = frame_size
@@ -81,17 +80,17 @@ class Generator(nn.Module):
         self.post_norm = LayerNorm(internal_channels)
         self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
         self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
-        self.reverb = nn.Parameter(torch.randn(1, 1, reverb_kernel_size))
+        self.ir = nn.Parameter(torch.randn(1, 1, 1024))
     
     def forward(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
         x = self.post_norm(x)
-        aperiodic = torch.exp(self.to_aperiodic(x))
-        periodic = torch.exp(self.to_periodic(x))
-        return aperiodic, periodic, self.reverb
+        periodic = F.softplus(self.to_periodic(x))
+        aperiodic = F.softplus(self.to_aperiodic(x))
+        return periodic, aperiodic, self.ir
     
     def synthesize(self, x, f0):
-        aperiodic, periodic, reverb = self.forward(x)
-        output = vocoder(f0, aperiodic, periodic, reverb, self.frame_size, self.n_fft, self.sample_rate)
+        periodic, aperiodic, ir = self.forward(x)
+        output = subtractive_synthesizer(f0, periodic, aperiodic, ir, self.n_fft, self.frame_size, self.sample_rate)
         return output

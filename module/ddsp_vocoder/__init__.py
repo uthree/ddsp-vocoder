@@ -32,7 +32,7 @@ class DDSPVocoder(L.LightningModule):
         _, fmap_real = D(wf)
         loss_feat = feature_loss(fmap_real, fmap_fake)
         loss_adv = generator_loss(logits_fake)
-        loss_stft = multiscale_stft_loss(wf, fake)
+        loss_stft = multiscale_stft_loss(wf, fake, scales=[self.generator.frame_size])
         loss_G = loss_adv + loss_stft + loss_feat
         self.manual_backward(loss_G)
         nn.utils.clip_grad_norm_(G.parameters(), 1.0)
@@ -59,6 +59,6 @@ class DDSPVocoder(L.LightningModule):
         
     
     def configure_optimizers(self):
-        opt_G = optim.AdamW(self.generator.parameters(), lr=1e-4, betas=(0.8, 0.99))
-        opt_D = optim.AdamW(self.discriminator.parameters(), lr=1e-4, betas=(0.8, 0.99))
+        opt_G = optim.RAdam(self.generator.parameters(), lr=1e-4)
+        opt_D = optim.RAdam(self.discriminator.parameters(), lr=1e-4)
         return opt_G, opt_D
