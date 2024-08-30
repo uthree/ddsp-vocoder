@@ -86,8 +86,8 @@ class Generator(nn.Module):
         x = self.input_layer(x)
         x = self.mid_layers(x)
         x = self.post_norm(x)
-        aperiodic = torch.exp(self.to_aperiodic(x))
-        periodic = torch.exp(self.to_periodic(x))
+        aperiodic = F.softplus(self.to_aperiodic(x))
+        periodic = F.softplus(self.to_periodic(x))
         phase = self.to_phase(x)
         return aperiodic, periodic, phase
     
