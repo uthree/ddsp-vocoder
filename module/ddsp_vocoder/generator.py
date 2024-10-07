@@ -80,7 +80,6 @@ class Generator(nn.Module):
         self.post_norm = LayerNorm(internal_channels)
         self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
         self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
-        self.ir = nn.Parameter(torch.randn(1, 1, 1024))
     
     def forward(self, x):
         x = self.input_layer(x)
@@ -88,9 +87,9 @@ class Generator(nn.Module):
         x = self.post_norm(x)
         periodic = F.softplus(self.to_periodic(x))
         aperiodic = F.softplus(self.to_aperiodic(x))
-        return periodic, aperiodic, self.ir
+        return periodic, aperiodic
     
     def synthesize(self, x, f0):
-        periodic, aperiodic, ir = self.forward(x)
-        output = subtractive_synthesizer(f0, periodic, aperiodic, ir, self.n_fft, self.frame_size, self.sample_rate)
+        periodic, aperiodic = self.forward(x)
+        output = subtractive_synthesizer(f0, periodic, aperiodic, self.n_fft, self.frame_size, self.sample_rate)
         return output

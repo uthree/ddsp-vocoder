@@ -134,7 +134,6 @@ def subtractive_synthesizer(
         f0: torch.Tensor,
         periodic_spectral_envelope: torch.Tensor,
         noise_spectral_envelope: torch.Tensor,
-        ir: torch.Tensor,
         n_fft: int,
         frame_size: int,
         sr: float
@@ -151,11 +150,10 @@ def subtractive_synthesizer(
     f0 = f0.to(torch.float)
     periodic_spectral_envelope = periodic_spectral_envelope.to(torch.float)
     noise_spectral_envelope = noise_spectral_envelope.to(torch.float)
-    ir = ir.to(torch.float)
 
     periodic = generate_filterd_impulse(f0, periodic_spectral_envelope, n_fft, frame_size, sr)
     noise = generate_noise(noise_spectral_envelope, n_fft, frame_size)
-    o = fft_convolve(periodic + noise, ir)
+    o = periodic + noise
     o = o.squeeze(1)
 
     o = o.to(dtype)
