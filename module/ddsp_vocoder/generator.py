@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .ddsp import subtractive_synthesizer
+from .ddsp import impulse_train, spectral_envelope_filter, framewise_fir_filter
 
 
 # Layer normalization
@@ -69,27 +69,47 @@ class Generator(nn.Module):
             n_fft=1920,
             frame_size=480,
             sample_rate=48000,
+            num_filters=4,
         ):
         super().__init__()
         self.frame_size = frame_size
         self.sample_rate = sample_rate
         self.n_fft = n_fft
         fft_bin = n_fft // 2 + 1
+        self.fft_bin = fft_bin
+        self.num_filters = num_filters
         self.input_layer = nn.Conv1d(n_mels, internal_channels, 1)
         self.mid_layers = nn.Sequential(*[ConvNeXtLayer(internal_channels) for _ in range(num_layers)])
         self.post_norm = LayerNorm(internal_channels)
         self.to_aperiodic = nn.Conv1d(internal_channels, fft_bin, 1)
         self.to_periodic = nn.Conv1d(internal_channels, fft_bin, 1)
+        self.to_filters = nn.Conv1d(internal_channels, n_fft * num_filters, 1)
     
-    def forward(self, x):
+    def net(self, x):
         x = self.input_layer(x)
         x = self.mid_layers(x)
         x = self.post_norm(x)
-        periodic = F.softplus(self.to_periodic(x))
         aperiodic = F.softplus(self.to_aperiodic(x))
-        return periodic, aperiodic
+        periodic = F.softplus(self.to_periodic(x))
+        filters = self.to_filters(x)
+        return aperiodic, periodic, filters
     
-    def synthesize(self, x, f0):
-        periodic, aperiodic = self.forward(x)
-        output = subtractive_synthesizer(f0, periodic, aperiodic, self.n_fft, self.frame_size, self.sample_rate)
-        return output
+    def forward(self, x, f0):
+        aperiodic, periodic, filters = self.net(x)
+        dtype = x.dtype
+
+        impulse = impulse_train(f0.squeeze(1), self.frame_size, self.sample_rate).to(torch.float)
+        noise = torch.randn_like(impulse).to(torch.float)
+        impulse = spectral_envelope_filter(impulse, periodic, self.n_fft, self.frame_size)
+        noise = spectral_envelope_filter(noise, aperiodic, self.n_fft, self.frame_size)
+        signal = noise + impulse
+        filters = torch.chunk(filters, self.num_filters, dim=1)
+        aux_outputs = []
+        for f in filters:
+            aux_outputs.append(signal.to(dtype))
+            signal = framewise_fir_filter(signal, f.to(torch.float), self.n_fft, self.frame_size) + signal
+        return signal.to(dtype), aux_outputs
+    
+    def infer(self, x, f0):
+        out, aux = self.forward(x, f0)
+        return out

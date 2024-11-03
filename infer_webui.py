@@ -63,7 +63,7 @@ if __name__ == "__main__":
             f0[:] = 0
 
         mel = to_mel(input_wf)
-        output_wf = generator.synthesize(mel, f0).squeeze(1)
+        output_wf = generator.infer(mel, f0).squeeze(1)
        
         output_wf = output_wf.clamp(-1.0, 1.0)
         output_wf = output_wf * 32768.0

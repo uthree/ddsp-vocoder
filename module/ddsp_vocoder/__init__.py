@@ -27,13 +27,16 @@ class DDSPVocoder(L.LightningModule):
         # Train Generator
         opt_G.zero_grad()
         self.toggle_optimizer(opt_G)
-        fake = G.synthesize(mel, f0)
+        fake, fake_auxs = G(mel, f0)
         logits_fake, fmap_fake = D(fake)
         _, fmap_real = D(wf)
         loss_feat = feature_loss(fmap_real, fmap_fake)
         loss_adv = generator_loss(logits_fake)
-        loss_stft = multiscale_stft_loss(wf, fake, scales=[self.generator.frame_size])
-        loss_G = loss_adv + loss_stft + loss_feat
+        loss_stft = multiscale_stft_loss(wf, fake, scales=[G.frame_size])
+        loss_aux = 0
+        for aux in fake_auxs:
+            loss_aux += multiscale_stft_loss(wf, aux, scales=[G.frame_size])
+        loss_G = loss_adv + loss_stft * 45.0 + loss_feat + loss_aux
         self.manual_backward(loss_G)
         nn.utils.clip_grad_norm_(G.parameters(), 1.0)
         opt_G.step()
@@ -42,6 +45,7 @@ class DDSPVocoder(L.LightningModule):
         self.log("loss/MS-STFT", loss_stft.item())
         self.log("loss/Adv.", loss_adv.item())
         self.log("loss/Feat.", loss_feat.item())
+        self.log("loss/Aux", loss_aux.item())
 
         # Train Discriminator
         opt_D.zero_grad()
