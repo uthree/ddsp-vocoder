@@ -43,7 +43,7 @@ if __name__ == "__main__":
     to_mel = LogMelSpectrogram(sample_rate, n_fft, frame_size, n_mels).to(device)
 
     @torch.inference_mode()
-    def convert(input_audio, pitch_shift, unvoiced):
+    def convert(input_audio, pitch_shift, breath_scale, voice_scale):
         input_sr, input_wf = input_audio
         dtype = input_wf.dtype
         if input_wf.ndim == 2:
@@ -59,11 +59,9 @@ if __name__ == "__main__":
         pitch = torch.log2(f0 / 440 + 1e-6) * 12.0
         pitch += pitch_shift
         f0 = 440 * 2 ** (pitch / 12.0)
-        if unvoiced:
-            f0[:] = 0
 
         mel = to_mel(input_wf)
-        output_wf = generator.infer(mel, f0).squeeze(1)
+        output_wf = generator.infer(mel, f0, breath_scale, voice_scale).squeeze(1)
        
         output_wf = output_wf.clamp(-1.0, 1.0)
         output_wf = output_wf * 32768.0
@@ -75,7 +73,8 @@ if __name__ == "__main__":
         inputs=[
             gr.Audio(label="Input"),
             gr.Slider(-24, 24, 0, label="Pitch Shift"),
-            gr.Checkbox(False, label="Unvoiced")
+            gr.Slider(0.0, 10.0, 1.0, label="Breath"),
+            gr.Slider(0.0, 10.0, 1.0, label="Voice")
         ],
         outputs=[
             gr.Audio(label="Output")

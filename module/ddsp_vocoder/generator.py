@@ -94,14 +94,14 @@ class Generator(nn.Module):
         filters = self.to_filters(x)
         return aperiodic, periodic, filters
     
-    def forward(self, x, f0):
+    def forward(self, x, f0, breath_scale=1.0, voice_scale=1.0):
         aperiodic, periodic, filters = self.net(x)
         dtype = x.dtype
 
         impulse = impulse_train(f0.squeeze(1), self.frame_size, self.sample_rate).to(torch.float)
         noise = torch.randn_like(impulse).to(torch.float)
-        impulse = spectral_envelope_filter(impulse, periodic, self.n_fft, self.frame_size)
-        noise = spectral_envelope_filter(noise, aperiodic, self.n_fft, self.frame_size)
+        impulse = spectral_envelope_filter(impulse * voice_scale, periodic, self.n_fft, self.frame_size)
+        noise = spectral_envelope_filter(noise * breath_scale, aperiodic, self.n_fft, self.frame_size)
         signal = noise + impulse
         filters = torch.chunk(filters, self.num_filters, dim=1)
         aux_outputs = []
@@ -110,6 +110,6 @@ class Generator(nn.Module):
             signal = framewise_fir_filter(signal, f.to(torch.float), self.n_fft, self.frame_size) + signal
         return signal.to(dtype), aux_outputs
     
-    def infer(self, x, f0):
-        out, aux = self.forward(x, f0)
+    def infer(self, x, f0, breath_scale=1.0, voice_scale=1.0):
+        out, aux = self.forward(x, f0, breath_scale, voice_scale)
         return out
