@@ -8,7 +8,7 @@ def safe_log(x, eps=1e-6):
     return torch.log(x + eps)
 
 
-def multiscale_stft_loss(x, y, scales=[256, 128]):
+def multiscale_stft_loss(x, y, scales=[512, 256, 128, 64]):
     x = x.to(torch.float)
     y = y.to(torch.float)
 
@@ -26,7 +26,7 @@ def multiscale_stft_loss(x, y, scales=[256, 128]):
         y_spec[y_spec.isnan()] = 0
         y_spec[y_spec.isinf()] = 0
 
-        loss += F.l1_loss(safe_log(x_spec), safe_log(y_spec)) + F.mse_loss(x_spec, y_spec)
+        loss += F.l1_loss(safe_log(x_spec), safe_log(y_spec))
     return loss / num_scales
 
 

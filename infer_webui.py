@@ -71,13 +71,13 @@ if __name__ == "__main__":
     demo = gr.Interface(
         convert,
         inputs=[
-            gr.Audio(label="Input"),
-            gr.Slider(-24, 24, 0, label="Pitch Shift"),
-            gr.Slider(0.0, 10.0, 1.0, label="Breath"),
-            gr.Slider(0.0, 10.0, 1.0, label="Voice")
+            gr.Audio(label="input"),
+            gr.Slider(-24, 24, 0, label="pitch Shift"),
+            gr.Slider(0.0, 10.0, 1.0, label="breath"),
+            gr.Slider(0.0, 10.0, 1.0, label="voice")
         ],
         outputs=[
-            gr.Audio(label="Output")
+            gr.Audio(label="output")
         ]
     )
     
